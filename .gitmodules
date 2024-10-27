@@ -1,0 +1,6 @@
+[submodule "components/wrapper_driver"]
+	path = components/wrapper_driver
+	url = git@github.com:lagoria/wrapper_driver.git
+[submodule "components/esp-idf-cxx"]
+	path = components/esp-idf-cxx
+	url = https://github.com/espressif/esp-idf-cxx.git
