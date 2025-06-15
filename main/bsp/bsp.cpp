@@ -14,12 +14,12 @@ namespace bsp {
 
 constexpr static const char TAG[] = "bsp";
 
-std::shared_ptr<touch::GT911> touch = nullptr;
-std::shared_ptr<ioexpand::GPO> ctp_rst = nullptr;
-std::shared_ptr<ioexpand::GPO> lcd_bl = nullptr;
-std::shared_ptr<ioexpand::GPO> lcd_rst = nullptr;
-std::shared_ptr<ioexpand::GPO> sd_cs = nullptr;
-std::shared_ptr<ioexpand::GPO> usb_sel = nullptr;
+std::shared_ptr<GT911> touch = nullptr;
+std::shared_ptr<Wrapper::GPOBase> ctp_rst = nullptr;
+std::shared_ptr<Wrapper::GPOBase> lcd_bl = nullptr;
+std::shared_ptr<Wrapper::GPOBase> lcd_rst = nullptr;
+std::shared_ptr<Wrapper::GPOBase> sd_cs = nullptr;
+std::shared_ptr<Wrapper::GPOBase> usb_sel = nullptr;
 esp_lcd_panel_handle_t panel = nullptr;
 
 
@@ -30,20 +30,17 @@ static int ioexpand_init() {
 	lcd_bl.reset(new ioexpand::GPO(hwdef::LCD_BL_PIN, 1));
 	lcd_rst.reset(new ioexpand::GPO(hwdef::LCD_RST_PIN, 1));
 	sd_cs.reset(new ioexpand::GPO(hwdef::SD_CS_PIN, 1));
-	usb_sel.reset(new ioexpand::GPO(hwdef::USB_SEL_PIN, 1));
+	usb_sel.reset(new ioexpand::GPO(hwdef::USB_SEL_PIN, 0));
 
-	Wrapper::OS::delay(200);
-	ctp_rst->set(1);
-	
-	ESP_LOGI(TAG, "I2C initialized successfully");
+	ESP_LOGI(TAG, "ioexpand initialized successfully");
 	return 0;
 }
 
 static int touch_init() {
 	ESP_LOGI(TAG, "Initialize touch controller");
-	// touch.reset(new touch::GT911(hwdef::I2C_MASTER_NUM));
-	// if (touch == nullptr) return -__LINE__;
-	// touch->init(hwdef::LCD_HOR_RES, hwdef::LCD_VER_RES);
+	Wrapper::GPI touch_irq(hwdef::INDEV_PIN_IRQ, 0);
+	touch.reset(new GT911(hwdef::I2C_MASTER_NUM, *ctp_rst));
+	touch->init(hwdef::LCD_HOR_RES, hwdef::LCD_VER_RES);
 	return 0;
 }
 

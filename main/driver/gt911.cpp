@@ -1,9 +1,8 @@
-#include "touch.h"
+#include "gt911.h"
+#include "os_wrapper.h"
 #include "esp_log.h"
 
-namespace touch {
-
-constexpr static const char *TAG = "touch";
+constexpr static const char *TAG = "gt911";
 
 constexpr static uint8_t I2C_GT911_ADDRESS          = 0x5D;
 constexpr static uint8_t I2C_GT911_ADDRESS_BACKUP   = 0x14;
@@ -26,7 +25,11 @@ int GT911::write_register(uint16_t reg, uint8_t data) {
 }
 
 int GT911::read_register(uint16_t reg, uint8_t buf[], uint32_t len) {
-    return _device.trans_recv((uint8_t *)&reg, sizeof(reg), buf, len);
+    uint8_t inv_reg[2];
+    inv_reg[0] = reg >> 8;
+    inv_reg[1] = reg;
+    _device.write(inv_reg, sizeof(inv_reg));
+    return _device.read(buf, len);
 }
 
 int GT911::read_data() {
@@ -102,12 +105,10 @@ int GT911::get_button_state() {
 }
 
 void GT911::reset() {
-    // if (tp->config.rst_gpio_num != GPIO_NUM_NC) {
-    //     ESP_RETURN_ON_ERROR(gpio_set_level(tp->config.rst_gpio_num, tp->config.levels.reset), TAG, "GPIO set level error!");
-    //     vTaskDelay(pdMS_TO_TICKS(10));
-    //     ESP_RETURN_ON_ERROR(gpio_set_level(tp->config.rst_gpio_num, !tp->config.levels.reset), TAG, "GPIO set level error!");
-    //     vTaskDelay(pdMS_TO_TICKS(10));
-    // }
+    _rst.set(0);
+    Wrapper::OS::delay(100);
+    _rst.set(1);
+    Wrapper::OS::delay(200);
 }
 
 int GT911::init(uint32_t x_max, uint32_t y_max) {
@@ -115,8 +116,8 @@ int GT911::init(uint32_t x_max, uint32_t y_max) {
     _x_max = x_max;
     _y_max = y_max;
 
-    _device.init(I2C_GT911_ADDRESS, 400000);
     reset();
+    _device.init(I2C_GT911_ADDRESS, 400000);
 
     read_register(GT911_PRODUCT_ID_REG, buf, 3);
     read_register(GT911_CONFIG_REG, &buf[3], 1);
@@ -126,5 +127,3 @@ int GT911::init(uint32_t x_max, uint32_t y_max) {
 
     return 0;
 }
-
-} // namespace touch

@@ -43,7 +43,7 @@ static void tcp_client_task(void *pvParameters) {
 
     while(1) {
         // Keep receiving until we have a reply
-        int len = _client->socket().recv(rx_buf, Cfg::SOCK_BUF_SIZE + 8);
+        int len = _client->recv(rx_buf, Cfg::SOCK_BUF_SIZE + 8);
         if (len < 0) {
             ESP_LOGE(TAG, "Error occurred during recv");
             break;
@@ -68,7 +68,7 @@ void register_recv_cb(RecvCallback cb) {
 }
 
 int send(IBuf buf) {
-    return _client->socket().send(buf.data(), buf.size());
+    return _client->send(buf.data(), buf.size());
 }
 
 void start() {

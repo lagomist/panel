@@ -39,14 +39,18 @@ static OBuf cmd_wifi(int argc, char* argv[]) {
 	CMD_SWITCH(
 		CMD_CASE(state,
 			Wrapper::JsonObject json;
-			json.add("status", Wrapper::WiFi::stateString(Wrapper::WiFi::state()));
+			json["status"] = Wrapper::WiFi::stateString(Wrapper::WiFi::state());
 			return Wrapper::Utils::snprint("%s", json.serialize().data());
 		);
 		CMD_CASE(connect,
 			CMD_ASSERT(argc == 2);
 			Wrapper::JsonObject json;
 			Wrapper::WiFi::State state = Wrapper::WiFi::Station::provision(argv[0], argv[1]);
-			state == Wrapper::WiFi::State::CONNECTED ? json.add("status", "succeed") : json.add("status", "failed");
+			if (state == Wrapper::WiFi::State::CONNECTED) {
+				json["status"] = "succeed";
+			} else {
+				json["status"] = "failed";
+			}
 			return Wrapper::Utils::snprint("%s", json.serialize().data());
 		);
 	);

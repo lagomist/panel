@@ -13,7 +13,7 @@ list (APPEND src_list
     ${COMPONENT_DIR}/comm/tcp_client.cpp
     ${COMPONENT_DIR}/comm/comm.cpp
     ${COMPONENT_DIR}/misc/cmds.cpp
-    ${COMPONENT_DIR}/driver/touch.cpp
+    ${COMPONENT_DIR}/driver/gt911.cpp
     ${COMPONENT_DIR}/driver/ch422g.cpp
     ${COMPONENT_DIR}/driver/ioexpand.cpp
     ${COMPONENT_DIR}/bsp/bsp.cpp
