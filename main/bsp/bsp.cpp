@@ -1,5 +1,7 @@
 #include "bsp.h"
 #include "hwdef.h"
+#include "sd_card.h"
+#include "spi_wrapper.h"
 #include "gpio_wrapper.h"
 #include "i2c_wrapper.h"
 #include "os_wrapper.h"
@@ -51,7 +53,7 @@ static void disp_init(void) {
 	memset(&panel_config, 0, sizeof(panel_config));
 	// RGB565 in parallel mode; thus 16bit in width
 	panel_config.data_width = 16; 
-	panel_config.psram_trans_align = 64;
+	panel_config.dma_burst_size = 64;
 	panel_config.num_fbs = hwdef::LCD_NUM_FB;
 	panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
 	panel_config.disp_gpio_num = hwdef::LCD_PIN_NUM_DISP_EN;
@@ -93,10 +95,17 @@ static void disp_init(void) {
 	ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
 }
 
+void sd_card_init() {
+	Wrapper::SPI::init(hwdef::SD_SPI_HOST, hwdef::SD_M0SI_PIN, hwdef::SD_MISO_PIN, hwdef::SD_CLK_PIN);
+	sd_cs->set(0);
+	sd_card::mount(hwdef::SD_SPI_HOST, -1);
+}
+
 void init() {
 	ioexpand_init();
 	disp_init();
 	touch_init();
+	sd_card_init();
 }
 
 }

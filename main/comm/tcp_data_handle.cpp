@@ -71,7 +71,7 @@ static void tcp_conn_cb() {
     args.setToArray();
     json.add(TcpDataHandle::JSON_KEY_CMD, "login");
     args.addToArray(Cfg::DEVICE_MARK);
-    json.addToObject(TcpDataHandle::JSON_KEY_ARGS, args);
+    json.add(TcpDataHandle::JSON_KEY_ARGS, args);
 
     IBuf data = (uint8_t *)json.serialize().data();
     ESP_LOGI(TAG, "send: %.*s", data.size(), data.data());

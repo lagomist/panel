@@ -47,5 +47,10 @@ constexpr uint8_t LCD_RST_PIN  		= 3;
 constexpr uint8_t SD_CS_PIN  		= 4;
 constexpr uint8_t USB_SEL_PIN  		= 5;
 
+/* sd card */
+constexpr uint8_t SD_SPI_HOST  	    = 2;
+constexpr uint8_t SD_M0SI_PIN  		= 11;
+constexpr uint8_t SD_MISO_PIN  		= 13;
+constexpr uint8_t SD_CLK_PIN  		= 12;
 
 }
