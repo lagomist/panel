@@ -8,7 +8,7 @@ constexpr const size_t SIZE_TCP         = 4096;
 
 constexpr const char * NAME_LVGL        = "gui";
 constexpr const size_t PRIO_LVGL        = 2;
-constexpr const size_t SIZE_LVGL        = 6 * 1024;
+constexpr const size_t SIZE_LVGL        = 12 * 1024;
 
 
 }

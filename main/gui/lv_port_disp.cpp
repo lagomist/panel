@@ -135,6 +135,7 @@ void init(void) {
 	ESP_LOGI(TAG, "Initialize LVGL library");
 	void *buf1 = nullptr;
 	void *buf2 = nullptr;
+	
 	lv_init();
 	lv_display_t * disp = lv_display_create(hwdef::LCD_HOR_RES, hwdef::LCD_VER_RES);
 	ESP_ERROR_CHECK(esp_lcd_rgb_panel_get_frame_buffer(bsp::panel, hwdef::LCD_NUM_FB, &buf1, &buf2));
