@@ -31,6 +31,14 @@ constexpr static const char TAG[] = "lv_port_disp";
 Wrapper::OS::RecursiveMutex * mutex = nullptr;
 static Wrapper::OS::Task _thread;
 
+
+// VSYNC event callback function
+IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
+{
+	_thread.notify();
+    return true;
+}
+
 static void increase_lvgl_tick(void *arg) {
     /* Tell LVGL how many milliseconds has elapsed */
     lv_tick_inc(LV_TICK_PERIOD_MS);
@@ -57,7 +65,7 @@ static void gui_disp_task(void *pvParameter) {
 	while (1) {
 		/* Try to take the semaphore, call lvgl related function on success */
 		mutex->lock();
-		time_till_next_ms = lv_task_handler();
+		time_till_next_ms = lv_timer_handler();
 		mutex->unlock();
 
 		// in case of task watch dog timeout, set the minimal delay to 10ms
@@ -71,29 +79,27 @@ static void gui_disp_task(void *pvParameter) {
 
 static void touch_trigger_cb(lv_indev_t * drv, lv_indev_data_t * data) {
 	if (bsp::touch == nullptr) return;
-	uint16_t touchpad_x[1] = {0};
-	uint16_t touchpad_y[1] = {0};
+	uint16_t touchpad_x = 0;
+	uint16_t touchpad_y = 0;
 	uint8_t touchpad_cnt = 0;
 
 	/* Read touch controller data */
 	bsp::touch->read_data();
 
 	/* Get coordinates */
-	touchpad_cnt = bsp::touch->get_coordinates(touchpad_x, touchpad_y, nullptr, 1);
+	touchpad_cnt = bsp::touch->get_coordinates(&touchpad_x, &touchpad_y, nullptr, 1);
 
 	if (touchpad_cnt > 0) {
-		data->point.x = touchpad_x[0];
-		data->point.y = touchpad_y[0];
-		data->state = LV_INDEV_STATE_PR;
+		if (touchpad_x > hwdef::LCD_HOR_RES || touchpad_y > hwdef::LCD_VER_RES) {
+			ESP_LOGE(TAG, "touch point error: [%d, %d]", touchpad_x, touchpad_y);
+			return;
+		}
+		data->point.x = touchpad_x;
+		data->point.y = touchpad_y;
+		data->state = LV_INDEV_STATE_PRESSED;
 	} else {
-		data->state = LV_INDEV_STATE_REL;
+		data->state = LV_INDEV_STATE_RELEASED;
 	}
-}
-
-static bool notify_lvgl_flush_ready(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event_data, void *user_ctx) {
-    lv_display_t *disp = (lv_display_t *)user_ctx;
-	lv_disp_flush_ready(disp);
-    return false;
 }
 
 static void disp_flush_cb(lv_display_t * drv, const lv_area_t * area, uint8_t * px_map) {
@@ -102,8 +108,17 @@ static void disp_flush_cb(lv_display_t * drv, const lv_area_t * area, uint8_t * 
 	int offsetx2 = area->x2;
 	int offsety1 = area->y1;
 	int offsety2 = area->y2;
-	// pass the draw buffer to the driver
-	esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
+
+	/* Action after last area refresh */
+    if (lv_display_flush_is_last(drv)) {
+        /* Switch the current RGB frame buffer to `px_map` */
+        esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
+
+        /* Wait for the last frame buffer to complete transmission */
+		_thread.notifyWait();
+    }
+
+	lv_display_flush_ready(drv);
 }
 
 
@@ -132,18 +147,22 @@ void init(void) {
     lv_display_set_user_data(disp, bsp::panel);
 	lv_display_set_flush_cb(disp, disp_flush_cb);
 
-	// Register event callbacks
-    esp_lcd_rgb_panel_event_callbacks_t cbs = {};
-	cbs.on_color_trans_done = notify_lvgl_flush_ready;
-    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(bsp::panel, &cbs, disp));
-
-	
-
 	/* Register a touchpad input device */
-	lv_indev_t * indev_drv = lv_indev_create();
+	lv_indev_t *indev_drv = lv_indev_create();
 	lv_indev_set_type(indev_drv, LV_INDEV_TYPE_POINTER);
+	lv_indev_set_display(indev_drv, disp);
 	lv_indev_set_read_cb(indev_drv, touch_trigger_cb);
 	
+	// Register callbacks for RGB panel events
+    esp_lcd_rgb_panel_event_callbacks_t cbs = {};
+	if (hwdef::LCD_BOUNCE_BUF_SIZE > 0) {
+		cbs.on_frame_buf_complete = rgb_lcd_on_vsync_event;
+	} else {
+		cbs.on_vsync = rgb_lcd_on_vsync_event;
+	}
+    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(bsp::panel, &cbs, NULL));
+	
+
 	/* If you want to use a task to create the graphic, you NEED to create a Pinned task
 	 * Otherwise there can be problem such as memory corruption and so on.
 	 * NOTE: When not using Wi-Fi nor Bluetooth you can pin the gui_disp_task to core 0 */

@@ -15,11 +15,10 @@ constexpr static uint16_t GT911_PRODUCT_ID_REG  = 0x8140;
 constexpr static uint16_t GT911_ENTER_SLEEP     = 0x8040;
 
 
-
-
 int GT911::write_register(uint16_t reg, uint8_t data) {
     uint8_t buf[3];
-    *(uint16_t *)&buf[0] = reg;
+    buf[0] = (uint8_t )(reg >> 8);
+    buf[1] = (uint8_t )reg;
     buf[2] = data;
     return _device.write(buf, sizeof(buf));
 }
@@ -28,15 +27,14 @@ int GT911::read_register(uint16_t reg, uint8_t buf[], uint32_t len) {
     uint8_t inv_reg[2];
     inv_reg[0] = reg >> 8;
     inv_reg[1] = reg;
-    _device.write(inv_reg, sizeof(inv_reg));
-    return _device.read(buf, len);
+    return _device.trans_recv(inv_reg, sizeof(inv_reg), buf, len);
 }
 
 int GT911::read_data() {
-    uint8_t buf[41];
+    uint8_t buf[41] = {0};
     uint8_t clear = 0;
 
-    read_register(GT911_READ_XY_REG, buf, 1);
+    int ret = read_register(GT911_READ_XY_REG, buf, 1);
 
     /* Any touch data? */
     if ((buf[0] & 0x80) == 0x00) {
@@ -53,6 +51,7 @@ int GT911::read_data() {
         _button = buf[0] ? 1 : 0;
 
     } else if ((buf[0] & 0x80) == 0x80) {
+        _button = 0;
         /* Count of touched points */
         uint8_t touch_cnt = buf[0] & 0x0f;
         if (touch_cnt > 5 || touch_cnt == 0) {
@@ -61,7 +60,10 @@ int GT911::read_data() {
         }
 
         /* Read all points */
-        read_register(GT911_READ_XY_REG + 1, &buf[1], touch_cnt * 8);
+        ret = read_register(GT911_READ_XY_REG + 1, &buf[1], touch_cnt * 8);
+        if (ret != 0) {
+            ESP_LOGE(TAG, "read xy reg failed");
+        }
 
         /* Clear all */
         write_register(GT911_READ_XY_REG, clear);
@@ -106,9 +108,11 @@ int GT911::get_button_state() {
 
 void GT911::reset() {
     _rst.set(0);
-    Wrapper::OS::delay(100);
+    Wrapper::OS::delay(20);
+    _irq.set(0);
+    Wrapper::OS::delay(20);
     _rst.set(1);
-    Wrapper::OS::delay(200);
+    Wrapper::OS::delay(20);
 }
 
 int GT911::init(uint32_t x_max, uint32_t y_max) {
@@ -116,8 +120,8 @@ int GT911::init(uint32_t x_max, uint32_t y_max) {
     _x_max = x_max;
     _y_max = y_max;
 
-    reset();
     _device.init(I2C_GT911_ADDRESS, 400000);
+    reset();
 
     read_register(GT911_PRODUCT_ID_REG, buf, 3);
     read_register(GT911_CONFIG_REG, &buf[3], 1);

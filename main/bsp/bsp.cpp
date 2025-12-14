@@ -16,12 +16,12 @@ namespace bsp {
 
 constexpr static const char TAG[] = "bsp";
 
-std::shared_ptr<GT911> touch = nullptr;
-std::shared_ptr<Wrapper::GPOBase> ctp_rst = nullptr;
-std::shared_ptr<Wrapper::GPOBase> lcd_bl = nullptr;
-std::shared_ptr<Wrapper::GPOBase> lcd_rst = nullptr;
-std::shared_ptr<Wrapper::GPOBase> sd_cs = nullptr;
-std::shared_ptr<Wrapper::GPOBase> usb_sel = nullptr;
+std::unique_ptr<GT911> touch = nullptr;
+std::unique_ptr<Wrapper::GPOBase> ctp_rst = nullptr;
+std::unique_ptr<Wrapper::GPOBase> lcd_bl = nullptr;
+std::unique_ptr<Wrapper::GPOBase> lcd_rst = nullptr;
+std::unique_ptr<Wrapper::GPOBase> sd_cs = nullptr;
+std::unique_ptr<Wrapper::GPOBase> usb_sel = nullptr;
 esp_lcd_panel_handle_t panel = nullptr;
 
 
@@ -40,8 +40,8 @@ static int ioexpand_init() {
 
 static int touch_init() {
 	ESP_LOGI(TAG, "Initialize touch controller");
-	Wrapper::GPI touch_irq(hwdef::INDEV_PIN_IRQ, 0);
-	touch.reset(new GT911(hwdef::I2C_MASTER_NUM, *ctp_rst));
+	Wrapper::GPO touch_irq(hwdef::INDEV_PIN_IRQ, -1);
+	touch.reset(new GT911(hwdef::I2C_MASTER_NUM, *ctp_rst, touch_irq));
 	touch->init(hwdef::LCD_HOR_RES, hwdef::LCD_VER_RES);
 	return 0;
 }
@@ -53,9 +53,11 @@ static void disp_init(void) {
 	memset(&panel_config, 0, sizeof(panel_config));
 	// RGB565 in parallel mode; thus 16bit in width
 	panel_config.data_width = 16; 
+	panel_config.bits_per_pixel = 16;
 	panel_config.dma_burst_size = 64;
 	panel_config.num_fbs = hwdef::LCD_NUM_FB;
 	panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
+	panel_config.bounce_buffer_size_px = hwdef::LCD_BOUNCE_BUF_SIZE;
 	panel_config.disp_gpio_num = hwdef::LCD_PIN_NUM_DISP_EN;
 	panel_config.pclk_gpio_num = hwdef::LCD_PIN_NUM_PCLK;
 	panel_config.vsync_gpio_num = hwdef::LCD_PIN_NUM_VSYNC;
@@ -84,8 +86,8 @@ static void disp_init(void) {
 	panel_config.timings.hsync_back_porch = 8;
 	panel_config.timings.hsync_front_porch = 8;
 	panel_config.timings.hsync_pulse_width = 4;
-	panel_config.timings.vsync_back_porch = 16;
-	panel_config.timings.vsync_front_porch = 16;
+	panel_config.timings.vsync_back_porch = 8;
+	panel_config.timings.vsync_front_porch = 8;
 	panel_config.timings.vsync_pulse_width = 4;
 	panel_config.timings.flags.pclk_active_neg = true;
 	// allocate frame buffer in PSRAM

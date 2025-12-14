@@ -13,7 +13,7 @@ public:
         uint16_t strength;
     };
 
-    GT911(uint8_t host, Wrapper::GPOBase &rst) : _device(host), _rst(rst) {}
+    GT911(uint8_t host, Wrapper::GPOBase &rst, Wrapper::GPOBase &irq) : _device(host), _rst(rst), _irq(irq) {}
     int init(uint32_t x_max, uint32_t y_max);
     void reset();
     int write_register(uint16_t reg, uint8_t data);
@@ -27,6 +27,7 @@ private:
     
     Wrapper::I2C::Device _device;
     Wrapper::GPOBase &_rst;
+    Wrapper::GPOBase &_irq;
     uint32_t _x_max;
     uint32_t _y_max;
     uint8_t _points;

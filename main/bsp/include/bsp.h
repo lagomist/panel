@@ -7,7 +7,7 @@
 
 namespace bsp {
 
-extern std::shared_ptr<GT911> touch;
+extern std::unique_ptr<GT911> touch;
 extern esp_lcd_panel_handle_t panel;
 
 void init();

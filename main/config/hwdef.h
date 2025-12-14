@@ -7,8 +7,9 @@ namespace hwdef {
 constexpr uint32_t LCD_HOR_RES          = 800;
 constexpr uint32_t LCD_VER_RES          = 480;
 constexpr uint32_t LCD_NUM_FB           = 2;
+constexpr uint32_t LCD_BOUNCE_BUF_SIZE  = LCD_HOR_RES * 10;
 
-constexpr int LCD_PIXEL_CLOCK_HZ        = (18 * 1000 * 1000);
+constexpr int LCD_PIXEL_CLOCK_HZ        = (16 * 1000 * 1000);
 constexpr int LCD_BK_LIGHT_ON_LEVEL     = 1;
 constexpr int LCD_BK_LIGHT_OFF_LEVEL    = !LCD_BK_LIGHT_ON_LEVEL;
 constexpr int LCD_PIN_NUM_BK_LIGHT      = -1;
