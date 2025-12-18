@@ -19,6 +19,8 @@ list (APPEND src_list
     ${COMPONENT_DIR}/driver/sd_card.cpp
     ${COMPONENT_DIR}/bsp/bsp.cpp
     ${COMPONENT_DIR}/gui/lv_port_disp.cpp
+    ${COMPONENT_DIR}/gui/file_explorer.cpp
+    ${COMPONENT_DIR}/gui/gui.cpp
 )
 
 idf_component_register(

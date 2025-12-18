@@ -9,12 +9,13 @@
 #include "bsp.h"
 #include "lvgl.h"
 
-#include "esp_timer.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_rgb.h"
 #include "esp_log.h"
 
 namespace gui {
+
+namespace port {
 
 /*********************
  *      DEFINES
@@ -27,7 +28,7 @@ constexpr uint32_t LV_TICK_PERIOD_MS    = 2;
  *  STATIC VARIABLES
  **********************/
 
-constexpr static const char TAG[] = "lv_port_disp";
+constexpr static const char TAG[] = "gui::port";
 Wrapper::OS::RecursiveMutex * mutex = nullptr;
 static Wrapper::OS::Task _thread;
 
@@ -39,7 +40,7 @@ IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const
     return true;
 }
 
-static void increase_lvgl_tick(void *arg) {
+static void increase_lvgl_tick(void) {
     /* Tell LVGL how many milliseconds has elapsed */
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
@@ -50,17 +51,9 @@ static void increase_lvgl_tick(void *arg) {
 static void gui_disp_task(void *pvParameter) {
 	ESP_LOGI(TAG, "start GUI diplay task");
 	uint32_t time_till_next_ms = 0;
-	// Tick interface for LVGL (using esp_timer to generate 2ms periodic event)
-    const esp_timer_create_args_t lvgl_tick_timer_args = {
-        .callback = &increase_lvgl_tick,
-		.arg = nullptr,
-		.dispatch_method = ESP_TIMER_TASK,
-        .name = "lvgl_tick",
-		.skip_unhandled_events = false,
-    };
-    esp_timer_handle_t lvgl_tick_timer = NULL;
-    ESP_ERROR_CHECK(esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, LV_TICK_PERIOD_MS * 1000));
+	// Tick interface for LVGL (using timer to generate 2ms periodic event)
+	Wrapper::Timer lvgl_tick_timer(increase_lvgl_tick, LV_TICK_PERIOD_MS, true);
+	lvgl_tick_timer.start();
 
 	while (1) {
 		/* Try to take the semaphore, call lvgl related function on success */
@@ -168,8 +161,10 @@ void init(void) {
 	 * Otherwise there can be problem such as memory corruption and so on.
 	 * NOTE: When not using Wi-Fi nor Bluetooth you can pin the gui_disp_task to core 0 */
 	mutex = new Wrapper::OS::RecursiveMutex();
+	assert(mutex);
 	_thread.create(gui_disp_task, nullptr, taskdef::NAME_LVGL, taskdef::SIZE_LVGL, taskdef::PRIO_LVGL, Wrapper::OS::Task::Core::CORE_1);
 }
 
-} // namespace gui
+} // namespace port
 
+} // namespace gui
